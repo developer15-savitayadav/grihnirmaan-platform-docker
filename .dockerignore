@@ -1,0 +1,16 @@
+.git
+.github
+**/.env
+**/.env.*
+!**/.env.example
+**/vendor
+**/node_modules
+frontend/dist
+backend/public/build
+backend/storage/logs/*
+backend/storage/framework/cache/*
+backend/storage/framework/sessions/*
+backend/storage/framework/views/*
+backend/tests
+frontend/src/legacy-inertia
+README-old.md
