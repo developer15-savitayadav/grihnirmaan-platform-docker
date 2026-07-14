@@ -1,21 +1,14 @@
-import ServiceCard from "@/components/ServiceCard";
+import ServiceCard from "@/Components/ServiceCard";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Autoplay, Pagination, Navigation } from "swiper/modules";
 import { ArrowRight, ArrowUpRight, Clock, ArrowLeft } from "lucide-react";
 import CountUp from "react-countup";
 import "swiper/css";
 import "swiper/css/pagination";
-import Layout from "@/components/Layout";
-import { Link } from "react-router-dom";
-import { api } from "@/lib/api";
+import AppLayout from "@/Layouts/AppLayout";
+import { Head, Link, useForm } from "@inertiajs/react";
 import { motion, type Variants, useScroll, useTransform } from "framer-motion";
-import {
-    FormEvent,
-    PropsWithChildren,
-    useEffect,
-    useMemo,
-    useState,
-} from "react";
+import { FormEvent, PropsWithChildren, useMemo, useState } from "react";
 
 import {
     AlertTriangle,
@@ -84,7 +77,6 @@ interface ProjectItem {
     bhk?: string | null;
     year: string;
     budget_range?: string | null;
-    duration_months?: number | null;
     is_featured?: boolean;
     before_image?: string | null;
 }
@@ -273,96 +265,39 @@ const DIFFERENTIATORS = [
  * Main Page
  * ──────────────────────────────────────────────────────────────────────*/
 
-export default function Home() {
-    const [services, setServices] = useState<ServiceItem[]>([]);
-    const [featuredProjects, setFeaturedProjects] = useState<ProjectItem[]>(
-        [],
-    );
-    const [testimonials, setTestimonials] = useState<TestimonialItem[]>([]);
-    const [brandPartners, setBrandPartners] = useState<BrandPartnerItem[]>(
-        [],
-    );
-    const [localities, setLocalities] = useState<LocalityItem[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [loadError, setLoadError] = useState(false);
-
-    useEffect(() => {
-        document.title = "GrihNirmaan — Home Construction in Lucknow, Done Right";
-
-        let cancelled = false;
-
-        api.get("/home")
-            .then(({ data }: { data: HomeProps }) => {
-                if (cancelled) return;
-                setServices(data.services || []);
-                setFeaturedProjects(data.featuredProjects || []);
-                setTestimonials(data.testimonials || []);
-                setBrandPartners(data.brandPartners || []);
-                setLocalities(data.localities || []);
-            })
-            .catch(() => {
-                if (!cancelled) setLoadError(true);
-            })
-            .finally(() => {
-                if (!cancelled) setLoading(false);
-            });
-
-        return () => {
-            cancelled = true;
-        };
-    }, []);
-
+export default function Home({
+    services,
+    featuredProjects,
+    testimonials,
+    brandPartners,
+    localities,
+}: HomeProps) {
     const { scrollY } = useScroll();
 
     const heroY = useTransform(scrollY, [0, 600], [0, 120]);
     const heroScale = useTransform(scrollY, [0, 600], [1, 1.12]);
-
-    /* Inline lead form — plain state + axios, replacing Inertia's useForm */
-    const [data, setDataState] = useState({
+    /* Inline lead form */
+    const {
+        data,
+        setData,
+        post,
+        processing,
+        errors,
+        reset,
+        recentlySuccessful,
+    } = useForm({
         name: "",
         phone: "",
         source: "home_inline_form",
     });
-    const [processing, setProcessing] = useState(false);
-    const [errors, setErrors] = useState<Record<string, string>>({});
-    const [recentlySuccessful, setRecentlySuccessful] = useState(false);
-
-    const setData = (key: keyof typeof data, value: string) => {
-        setDataState((prev) => ({ ...prev, [key]: value }));
-    };
-
-    const reset = (...keys: (keyof typeof data)[]) => {
-        setDataState((prev) => {
-            const next = { ...prev };
-            keys.forEach((key) => {
-                (next as any)[key] = "";
-            });
-            return next;
-        });
-    };
 
     const submitLead = (e: FormEvent) => {
         e.preventDefault();
-        setProcessing(true);
-        setErrors({});
 
-        api.post("/leads", data)
-            .then(() => {
-                setRecentlySuccessful(true);
-                reset("name", "phone");
-                setTimeout(() => setRecentlySuccessful(false), 3000);
-            })
-            .catch((err) => {
-                const rawErrors = err?.response?.data?.errors || {};
-                const flatErrors: Record<string, string> = {};
-                Object.keys(rawErrors).forEach((key) => {
-                    flatErrors[key] = Array.isArray(rawErrors[key])
-                        ? rawErrors[key][0]
-                        : rawErrors[key];
-                });
-                setErrors(flatErrors);
-            })
-            .finally(() => setProcessing(false));
+        post(route("leads.store"), {
+            preserveScroll: true,
+            onSuccess: () => reset("name", "phone"),
+        });
     };
 
     const defaultCalculator = {
@@ -411,7 +346,8 @@ export default function Home() {
     }, [appliedCalc, localities]);
 
     return (
-        <Layout>
+        <AppLayout>
+            <Head title="GrihNirmaan — Home Construction in Lucknow, Done Right" />
 
             {/* ─── 1. HERO ─────────────────────────────────────────── */}
             <section className="hero-section  bg-white  overflow-hidden px-4 pb-10 sm:px-6 lg:px-8">
@@ -467,7 +403,7 @@ export default function Home() {
                                 className="mt-8 flex flex-nowrap gap-4"
                             >
                                 <Link
-                                    to="#lead-form"
+                                    href="#lead-form"
                                     className="inline-flex items-center gap-2 rounded-xl bg-white hero-btn font-body text-sm font-semibold hover:text-brand-blue shadow-lg transition hover:-translate-y-0.5 hover:bg-white text-charcoal sm:text-base"
                                 >
                                     <Phone className="h-5 w-5" />
@@ -475,7 +411,7 @@ export default function Home() {
                                 </Link>
 
                                 <Link
-                                    to="/cost-calculator"
+                                    href="/cost-calculator"
                                     className="inline-flex items-center gap-2 rounded-xl border border-white/35 bg-white/10  hero-btn font-body text-sm font-semibold text-white backdrop-blur transition hover:-translate-y-0.5 hover:bg-white hover:text-brand-blue sm:text-base"
                                 >
                                     <Calculator className="h-5 w-5" />
@@ -495,8 +431,7 @@ export default function Home() {
                                                 <img
                                                     key={testimonial.id}
                                                     src={
-                                                        testimonial.customer_photo ??
-                                                        undefined
+                                                        testimonial.customer_photo
                                                     }
                                                     alt={
                                                         testimonial.customer_name
@@ -518,7 +453,7 @@ export default function Home() {
                                 </div>
 
                                 <Link
-                                    to=""
+                                    href=""
                                     className="flex h-12 w-12 items-center justify-center rounded-full bg-[#F7E9D7] transition hover:bg-[#eed7bd]"
                                 >
                                     <ArrowUpRight className="h-5 w-5 text-[#2D2D2D]" />
@@ -643,7 +578,7 @@ export default function Home() {
                             {PROBLEMS.map(({ Icon, title, text }, i) => (
                                 <Reveal key={title}>
                                     <Link
-                                        to={`/how-it-works#problem-${i + 1}`}
+                                        href={`/how-it-works#problem-${i + 1}`}
                                         className="group flex gap-5 rounded-3xl bg-white p-7   transition-all duration-300 hover:-translate-y-2    problem-card"
                                     >
                                         <div className="problem-icon  shrink-0 i ">
@@ -730,7 +665,7 @@ export default function Home() {
                                     className="!h-auto"
                                 >
                                     <Link
-                                        to={`/services/${service.slug}`}
+                                        href={`/services/${service.slug}`}
                                         className="service-style-card group"
                                     >
                                         <div className="service-card-glow" />
@@ -835,7 +770,7 @@ export default function Home() {
 
                     <Reveal className="mt-12 text-center">
                         <Link
-                            to="/how-it-works"
+                            href="/how-it-works"
                             className="inline-flex items-center gap-2 rounded-md border-2 black-btn px-6 py-3 font-body text-sm font-semibold text-cream transition-colors "
                         >
                             See the full 12-step journey
@@ -991,7 +926,7 @@ export default function Home() {
                                                 </div>
 
                                                 <Link
-                                                    to={`/projects/${project.slug}`}
+                                                    href={`/projects/${project.slug}`}
                                                     className="project-icon flex items-center justify-center"
                                                     aria-label={`View ${project.title}`}
                                                 >
@@ -1007,7 +942,7 @@ export default function Home() {
 
                     <Reveal className="mt-14 text-center">
                         <Link
-                            to="/projects"
+                            href="/projects"
                             className="inline-flex items-center gap-2 rounded-md border-2 black-btn px-6 py-3 font-body text-sm font-semibold text-cream transition-colors "
                         >
                             View All Projects
@@ -1284,7 +1219,7 @@ export default function Home() {
                                     </div>
 
                                     <Link
-                                        to={`/cost-calculator?plot_area=${appliedCalc.plotArea}&area_unit=${appliedCalc.areaUnit}&floors=${appliedCalc.floors}&finish_level=${appliedCalc.finishLevel}&locality=${appliedCalc.locality}`}
+                                        href={`/cost-calculator?plot_area=${appliedCalc.plotArea}&area_unit=${appliedCalc.areaUnit}&floors=${appliedCalc.floors}&finish_level=${appliedCalc.finishLevel}&locality=${appliedCalc.locality}`}
                                         className="mt-7 inline-flex w-full items-center justify-center gap-2 rounded-xl hover:bg-white bg-[#c4623a] px-5 py-4 font-body text-sm font-bold hover:text-black text-white transition-all hover:-translate-y-0.5"
                                     >
                                         Get full estimate
@@ -1339,7 +1274,7 @@ export default function Home() {
                             {testimonials.map((t) => (
                                 <SwiperSlide key={t.id} className="!h-auto">
                                     <Link
-                                        to={t.project ? `/projects/${t.project.slug}` : "#"}
+                                        href={t.project?.url || "#"}
                                         className="block h-full"
                                     >
                                         <article className="testimonial-card relative h-full cursor-pointer p-8 ">
@@ -1347,7 +1282,7 @@ export default function Home() {
                                                 {/* Image */}
                                                 <div className="relative">
                                                     <img
-                                                        src={t.customer_photo ?? undefined}
+                                                        src={t.customer_photo}
                                                         alt={t.customer_name}
                                                         className="h-[210px] w-[150px] rounded-[28px] object-cover"
                                                     />
@@ -1537,7 +1472,7 @@ export default function Home() {
                                         </a>
                                         <div className="mt-8">
                                             <Link
-                                                to="/book-consultation"
+                                                href="/book-consultation"
                                                 className="inline-flex items-center rounded-2xl bg-[#C4623A] px-6 py-3 font-bold text-white hover:bg-[#b75531]"
                                             >
                                                 Book Free Consultation
@@ -1627,6 +1562,6 @@ export default function Home() {
                     </div>
                 </div>
             </section>
-        </Layout>
+        </AppLayout>
     );
 }
